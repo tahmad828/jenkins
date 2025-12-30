@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, request, redirect, url_for, jsonify
 from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
@@ -14,17 +14,20 @@ class Task(db.Model):
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
-        title = request.form.get('title')
+        data = request.get_json()
+        title = data.get('title') if data else None
         if title:
             task = Task(title=title)
             db.session.add(task)
             db.session.commit()
-        return redirect(url_for('index'))
+            return jsonify({"message": "Task added"}), 201
+        return jsonify({"error": "Title required"}), 400
 
     tasks = Task.query.all()
-    return render_template('index.html', tasks=tasks)
+    return jsonify([{"id": t.id, "title": t.title} for t in tasks])
 
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     app.run(debug=True)
+
