@@ -15,23 +15,22 @@ def client():
 def test_home_page(client):
     """Test GET request to home page"""
     response = client.get('/')
-    assert response.status_code in (200, 302)  # 200 OK or redirect
+    assert response.status_code == 200
+    assert response.is_json
 
 def test_add_task(client):
-    """Test adding a task/student via form POST"""
-    # Simulate a logged-in user if needed
-    with client.session_transaction() as sess:
-        sess['username'] = 'testuser'
-
+    """Test adding a task via JSON POST"""
     response = client.post(
         '/',
-        data={
-            'title': 'Test Task'
-        },
-        follow_redirects=True
+        json={'title': 'Test Task'}
     )
 
-    # Ensure response contains the task title
-    assert b'Test Task' in response.data
+    # Should return 201 CREATED
+    assert response.status_code == 201
+    assert response.is_json
+    assert response.get_json()['message'] == 'Task added'
 
-
+    # Verify task exists in database
+    get_response = client.get('/')
+    tasks = get_response.get_json()
+    assert any(t['title'] == 'Test Task' for t in tasks)
